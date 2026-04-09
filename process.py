@@ -559,11 +559,10 @@ body{{font-family:"Malgun Gothic","Apple Gothic",sans-serif;background:#f5f0e8;c
 .page-btn:disabled{{opacity:.3;cursor:default}}
 .page-indicator{{font-size:.82rem;color:#6b5a48;min-width:72px;text-align:center}}
 .viewer-body{{flex:1;display:flex;overflow:hidden}}
-.viewer-image-pane{{flex:1;overflow:auto;background:#1a1a1a;display:flex;align-items:flex-start;justify-content:center;padding:12px;cursor:zoom-in}}
-.viewer-image-pane img{{object-fit:contain;border-radius:4px;box-shadow:0 4px 24px rgba(0,0,0,.6);transition:transform .25s ease;transform-origin:top center}}
-.viewer-image-pane img.rot90{{transform:rotate(90deg);max-width:calc(100vh - 160px);margin-top:24px}}
-.viewer-image-pane img.rot180{{transform:rotate(180deg)}}
-.viewer-image-pane img.rot270{{transform:rotate(270deg);max-width:calc(100vh - 160px);margin-top:24px}}
+.viewer-image-pane{{flex:1;overflow:hidden;background:#1a1a1a;position:relative;cursor:grab}}
+.viewer-image-pane.panning{{cursor:grabbing}}
+#zoom-wrap{{position:absolute;transform-origin:0 0;will-change:transform}}
+#zoom-wrap img{{display:block;border-radius:4px;box-shadow:0 4px 24px rgba(0,0,0,.6);transform-origin:center center;user-select:none;-webkit-user-drag:none}}
 .viewer-side{{width:360px;flex-shrink:0;overflow-y:auto;background:#fffdf7;border-left:1px solid #e0d0bc;display:flex;flex-direction:column}}
 .side-section{{padding:16px;border-bottom:1px solid #ede3d3}}
 .side-section:last-child{{border-bottom:none;flex:1}}
@@ -622,15 +621,15 @@ mark{{background:#ffe066;border-radius:2px;padding:0 2px}}
       <button class="page-btn" onclick="rotateImage(90)" title="오른쪽으로 회전">↻</button>
     </div>
     <div style="display:flex;gap:4px;margin-left:4px;align-items:center">
-      <button class="page-btn" onclick="zoom(-0.25)" title="축소">－</button>
-      <span id="zoom-label" style="font-size:.75rem;color:#888;min-width:36px;text-align:center">100%</span>
-      <button class="page-btn" onclick="zoom(0.25)" title="확대">＋</button>
-      <button class="page-btn" onclick="resetZoom()" title="원래 크기" style="font-size:.65rem;padding:0 4px;width:auto">1:1</button>
+      <button class="page-btn" onclick="zoom(-0.1)" title="축소">－</button>
+      <span id="zoom-label" style="font-size:.75rem;color:#888;min-width:36px;text-align:center">맞춤</span>
+      <button class="page-btn" onclick="zoom(0.1)" title="확대">＋</button>
+      <button class="page-btn" onclick="resetZoom()" title="화면에 맞춤" style="font-size:.65rem;padding:0 4px;width:auto">맞춤</button>
     </div>
   </div>
   <div class="viewer-body">
-    <div class="viewer-image-pane">
-      <img id="viewer-img" src="" alt="">
+    <div class="viewer-image-pane" id="viewer-pane">
+      <div id="zoom-wrap"><img id="viewer-img" src="" alt="" draggable="false"></div>
     </div>
     <div class="viewer-side">
       <!-- 전사 섹션 -->
@@ -752,19 +751,21 @@ async function renderPage() {{
   if (!total) return;
   const page = pages[currentPageIdx];
 
-  currentZoom = 1.0;
-  document.getElementById("zoom-label").textContent = "100%";
   const img = document.getElementById("viewer-img");
-  img.className = "";
   img.style.transform = "";
-  img.style.maxWidth = "100%";
   img.src = `input/${{page.filename}}`;
-  img.onload = applyRotation;
+  img.onload = function() {{
+    pz.imgW = this.naturalWidth;
+    pz.imgH = this.naturalHeight;
+    const k = "rot__" + (currentVol?.pages||[])[currentPageIdx]?.filename;
+    pz.rotDeg = k ? parseInt(localStorage.getItem(k)||"0") : 0;
+    this.style.transform = pz.rotDeg ? `rotate(${{pz.rotDeg}}deg)` : "";
+    pzFitAndCenter();
+  }};
   const label = page.page_label==="cover_front"?"앞표지":page.page_label==="cover_back"?"뒷표지":`${{currentPageIdx+1}} / ${{total}}`;
   document.getElementById("page-indicator").textContent = label;
   document.getElementById("btn-prev").disabled = currentPageIdx===0;
   document.getElementById("btn-next").disabled = currentPageIdx>=total-1;
-  document.querySelector(".viewer-image-pane").scrollTop = 0;
 
   // 전사 로드
   document.getElementById("trans-area").value = "";
@@ -818,63 +819,111 @@ window.changePage = function(delta) {{
   renderPage();
 }};
 
-// ── 확대/축소 ─────────────────────────────────────────────────────────────
-let currentZoom = 1.0;
+// ── Pan-Zoom 시스템 ────────────────────────────────────────────────────────
+const pz = {{ zoom: 1, panX: 0, panY: 0, rotDeg: 0, imgW: 0, imgH: 0 }};
+let _pzDrag = false, _pzLast = {{x:0,y:0}};
 
-function updateZoom() {{
+function pzApply() {{
+  const wrap = document.getElementById("zoom-wrap");
   const img = document.getElementById("viewer-img");
-  const rotClass = img.className.replace(/\s/g,"");
-  const isRotated = rotClass==="rot90"||rotClass==="rot270";
-  img.style.transform = isRotated
-    ? `rotate(${{rotClass==="rot90"?90:270}}deg) scale(${{currentZoom}})`
-    : `scale(${{currentZoom}})`;
-  img.style.maxWidth = currentZoom > 1 ? "none" : (isRotated ? "calc(100vh - 160px)" : "100%");
-  document.getElementById("zoom-label").textContent = Math.round(currentZoom*100) + "%";
+  if (!wrap || !img) return;
+  wrap.style.transform = `translate(${{pz.panX}}px,${{pz.panY}}px) scale(${{pz.zoom}})`;
+  img.style.transform = pz.rotDeg ? `rotate(${{pz.rotDeg}}deg)` : "";
+  const label = document.getElementById("zoom-label");
+  if (label) label.textContent = Math.round(pz.zoom*100) + "%";
 }}
+
+function pzFitAndCenter() {{
+  const pane = document.getElementById("viewer-pane");
+  if (!pane || !pz.imgW || !pz.imgH) return;
+  const pw = pane.clientWidth, ph = pane.clientHeight;
+  const W = pz.imgW, H = pz.imgH;
+  const swapped = pz.rotDeg===90 || pz.rotDeg===270;
+  const visW = swapped ? H : W, visH = swapped ? W : H;
+  pz.zoom = Math.min(pw/visW, ph/visH);
+  pz.panX = pw/2 - W/2*pz.zoom;
+  pz.panY = ph/2 - H/2*pz.zoom;
+  pzApply();
+}}
+
+function pzZoomAt(delta, cx, cy) {{
+  const prev = pz.zoom;
+  pz.zoom = Math.min(8, Math.max(0.05, pz.zoom + delta));
+  const r = pz.zoom / prev;
+  pz.panX = cx - (cx - pz.panX)*r;
+  pz.panY = cy - (cy - pz.panY)*r;
+  pzApply();
+}}
+
+// 드래그 패닝
+const _vpane = document.getElementById("viewer-pane");
+_vpane.addEventListener("mousedown", e => {{
+  if (e.button!==0) return;
+  _pzDrag=true; _pzLast={{x:e.clientX,y:e.clientY}};
+  _vpane.classList.add("panning"); e.preventDefault();
+}});
+document.addEventListener("mousemove", e => {{
+  if (!_pzDrag) return;
+  pz.panX += e.clientX-_pzLast.x; pz.panY += e.clientY-_pzLast.y;
+  _pzLast={{x:e.clientX,y:e.clientY}}; pzApply();
+}});
+document.addEventListener("mouseup", () => {{ _pzDrag=false; _vpane.classList.remove("panning"); }});
+
+// 터치 패닝/줌
+let _touches = {{}};
+_vpane.addEventListener("touchstart", e => {{
+  [...e.changedTouches].forEach(t => _touches[t.identifier]={{x:t.clientX,y:t.clientY}});
+}}, {{passive:true}});
+_vpane.addEventListener("touchmove", e => {{
+  e.preventDefault();
+  const ts = [...e.touches];
+  if (ts.length===1) {{
+    const t=ts[0], prev=_touches[t.identifier];
+    if (prev) {{ pz.panX+=t.clientX-prev.x; pz.panY+=t.clientY-prev.y; pzApply(); }}
+    _touches[t.identifier]={{x:t.clientX,y:t.clientY}};
+  }} else if (ts.length===2) {{
+    const [a,b]=ts, pa=_touches[a.identifier], pb=_touches[b.identifier];
+    if (pa&&pb) {{
+      const prevDist=Math.hypot(pa.x-pb.x,pa.y-pb.y);
+      const newDist=Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);
+      const midX=(a.clientX+b.clientX)/2, midY=(a.clientY+b.clientY)/2;
+      const rect=_vpane.getBoundingClientRect();
+      const delta=(newDist/prevDist-1)*pz.zoom;
+      pzZoomAt(delta,midX-rect.left,midY-rect.top);
+    }}
+    _touches[a.identifier]={{x:a.clientX,y:a.clientY}};
+    _touches[b.identifier]={{x:b.clientX,y:b.clientY}};
+  }}
+}}, {{passive:false}});
+_vpane.addEventListener("touchend", e => {{
+  [...e.changedTouches].forEach(t => delete _touches[t.identifier]);
+}}, {{passive:true}});
+
+// 마우스 휠 줌 (커서 위치 기준)
+_vpane.addEventListener("wheel", e => {{
+  if (document.getElementById("viewer-view").style.display!=="flex") return;
+  e.preventDefault();
+  const rect=_vpane.getBoundingClientRect();
+  pzZoomAt((e.deltaY<0?0.1:-0.1)*pz.zoom, e.clientX-rect.left, e.clientY-rect.top);
+}}, {{passive:false}});
 
 window.zoom = function(delta) {{
-  currentZoom = Math.min(4, Math.max(0.25, currentZoom + delta));
-  updateZoom();
+  const pw=_vpane.clientWidth, ph=_vpane.clientHeight;
+  pzZoomAt(delta*pz.zoom, pw/2, ph/2);
 }};
-
-window.resetZoom = function() {{
-  currentZoom = 1.0;
-  updateZoom();
-}};
-
-// 마우스 휠 확대/축소
-document.querySelector(".viewer-image-pane").addEventListener("wheel", e => {{
-  if (document.getElementById("viewer-view").style.display === "flex") {{
-    e.preventDefault();
-    const delta = e.deltaY < 0 ? 0.1 : -0.1;
-    currentZoom = Math.min(4, Math.max(0.25, currentZoom + delta));
-    updateZoom();
-  }}
-}}, {{passive: false}});
+window.resetZoom = pzFitAndCenter;
 
 // ── 이미지 회전 ───────────────────────────────────────────────────────────
-function getRotKey() {{
-  const pages = currentVol?.pages||[];
-  if (!pages.length) return null;
-  return "rot__" + pages[currentPageIdx].filename;
-}}
-
-function applyRotation() {{
-  const key = getRotKey();
-  if (!key) return;
-  const deg = parseInt(localStorage.getItem(key)||"0");
-  const img = document.getElementById("viewer-img");
-  img.className = deg===90?"rot90":deg===180?"rot180":deg===270?"rot270":"";
-  updateZoom();
-}}
-
 window.rotateImage = function(delta) {{
-  const key = getRotKey();
-  if (!key) return;
+  const pages = currentVol?.pages||[];
+  if (!pages.length) return;
+  const key = "rot__" + pages[currentPageIdx].filename;
   const cur = parseInt(localStorage.getItem(key)||"0");
   const next = ((cur + delta) % 360 + 360) % 360;
   localStorage.setItem(key, String(next));
-  applyRotation();
+  pz.rotDeg = next;
+  document.getElementById("viewer-img").style.transform = next ? `rotate(${{next}}deg)` : "";
+  pzFitAndCenter();
 }};
 
 // ── 전사 저장 ─────────────────────────────────────────────────────────────
