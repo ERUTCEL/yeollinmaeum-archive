@@ -1,0 +1,6 @@
+.venv/
+output/.state.json
+output/.batch_state.json
+__pycache__/
+*.pyc
+.DS_Store

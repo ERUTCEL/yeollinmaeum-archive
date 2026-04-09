@@ -1,0 +1,19 @@
+{
+  "date": null,
+  "author": null,
+  "content": "텍스트가 매우 흐릿하고 대부분 읽기 어려운 상태입니다. 왼쪽에 '~하고' 로 시작하는 한글 텍스트가 보이며, 중앙의 'But here in my heart I give you the best of my love Happy' 라는 영문이 명확합니다. 아래로는 [불명확]한 한글 텍스트들이 흐릿하게 보입니다.",
+  "summary": "책 표지로 보이는 페이지로, '열린마음'이라는 학과 방명록의 일부입니다. 영문 메시지가 중심이며 한글 텍스트는 대부분 판독이 어렵습니다.",
+  "tags": [
+    "방명록",
+    "영문메시지"
+  ],
+  "mood": "positive",
+  "decade": "2000s",
+  "image_quality": "poor",
+  "filename": "1999년_열린마음_cover_front.jpg",
+  "processed_at": "2026-04-09T23:20:39.266493",
+  "volume_id": "1999년_열린마음",
+  "volume_title": "1999년 열린마음",
+  "year": 1999,
+  "page_label": "cover_front"
+}

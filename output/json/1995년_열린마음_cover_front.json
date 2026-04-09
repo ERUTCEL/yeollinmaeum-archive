@@ -1,0 +1,21 @@
+{
+  "date": null,
+  "author": null,
+  "content": "왼쪽: 빨간색과 검은색으로 쓴 한글 텍스트 (회전된 상태로 읽기 어려움)\n오른쪽: 검은색 손글씨로 쓴 한글 텍스트 (회전된 상태)\n중앙: '대구대학교' 'KOREA UNIVERSITY' 텍스트와 대학 교표\n사진: 건축물 사진 2장 (회전된 상태)",
+  "summary": "대구대학교 학과 방명록/노트 페이지로, 빨간색과 검은색 손글씨 텍스트가 있으나 사진이 회전되어 있어 정확한 내용 파악이 어렵습니다.",
+  "tags": [
+    "방명록",
+    "일상노트",
+    "대학생활",
+    "1990s-2000s"
+  ],
+  "mood": "neutral",
+  "decade": "1990s",
+  "image_quality": "fair",
+  "filename": "1995년_열린마음_cover_front.jpg",
+  "processed_at": "2026-04-09T18:30:32.578400",
+  "volume_id": "1995년_열린마음",
+  "volume_title": "1995년 열린마음",
+  "year": 1995,
+  "page_label": "cover_front"
+}
