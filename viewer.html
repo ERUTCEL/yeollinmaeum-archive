@@ -40,9 +40,9 @@ body{font-family:"Malgun Gothic","Apple Gothic",sans-serif;background:#f5f0e8;co
 .viewer-body{flex:1;display:flex;overflow:hidden}
 .viewer-image-pane{flex:1;overflow:auto;background:#1a1a1a;display:flex;align-items:flex-start;justify-content:center;padding:12px}
 .viewer-image-pane img{max-width:100%;object-fit:contain;border-radius:4px;box-shadow:0 4px 24px rgba(0,0,0,.6);transition:transform .25s ease}
-.viewer-image-pane img.rot90{transform:rotate(90deg);max-width:calc(100vh - 120px)}
-.viewer-image-pane img.rot180{transform:rotate(180deg)}
-.viewer-image-pane img.rot270{transform:rotate(270deg);max-width:calc(100vh - 120px)}
+.viewer-image-pane img.rot90{transform:rotate(90deg);max-width:calc(100vh - 160px);margin-top:calc((100vw - 360px) / 2 - 20px)}
+.viewer-image-pane img.rot180{transform:rotate(180deg);margin-top:24px}
+.viewer-image-pane img.rot270{transform:rotate(270deg);max-width:calc(100vh - 160px);margin-top:calc((100vw - 360px) / 2 - 20px)}
 .viewer-side{width:360px;flex-shrink:0;overflow-y:auto;background:#fffdf7;border-left:1px solid #e0d0bc;display:flex;flex-direction:column}
 .side-section{padding:16px;border-bottom:1px solid #ede3d3}
 .side-section:last-child{border-bottom:none;flex:1}
