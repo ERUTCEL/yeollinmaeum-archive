@@ -559,8 +559,8 @@ body{{font-family:"Malgun Gothic","Apple Gothic",sans-serif;background:#f5f0e8;c
 .page-btn:disabled{{opacity:.3;cursor:default}}
 .page-indicator{{font-size:.82rem;color:#6b5a48;min-width:72px;text-align:center}}
 .viewer-body{{flex:1;display:flex;overflow:hidden}}
-.viewer-image-pane{{flex:1;overflow:auto;background:#1a1a1a;display:flex;align-items:flex-start;justify-content:center;padding:12px}}
-.viewer-image-pane img{{max-width:100%;object-fit:contain;border-radius:4px;box-shadow:0 4px 24px rgba(0,0,0,.6);transition:transform .25s ease}}
+.viewer-image-pane{{flex:1;overflow:auto;background:#1a1a1a;display:flex;align-items:flex-start;justify-content:center;padding:12px;cursor:zoom-in}}
+.viewer-image-pane img{{object-fit:contain;border-radius:4px;box-shadow:0 4px 24px rgba(0,0,0,.6);transition:transform .25s ease;transform-origin:top center}}
 .viewer-image-pane img.rot90{{transform:rotate(90deg);max-width:calc(100vh - 160px);margin-top:24px}}
 .viewer-image-pane img.rot180{{transform:rotate(180deg)}}
 .viewer-image-pane img.rot270{{transform:rotate(270deg);max-width:calc(100vh - 160px);margin-top:24px}}
@@ -620,6 +620,12 @@ mark{{background:#ffe066;border-radius:2px;padding:0 2px}}
     <div style="display:flex;gap:4px;margin-left:8px">
       <button class="page-btn" onclick="rotateImage(-90)" title="왼쪽으로 회전">↺</button>
       <button class="page-btn" onclick="rotateImage(90)" title="오른쪽으로 회전">↻</button>
+    </div>
+    <div style="display:flex;gap:4px;margin-left:4px;align-items:center">
+      <button class="page-btn" onclick="zoom(-0.25)" title="축소">－</button>
+      <span id="zoom-label" style="font-size:.75rem;color:#888;min-width:36px;text-align:center">100%</span>
+      <button class="page-btn" onclick="zoom(0.25)" title="확대">＋</button>
+      <button class="page-btn" onclick="resetZoom()" title="원래 크기" style="font-size:.65rem;padding:0 4px;width:auto">1:1</button>
     </div>
   </div>
   <div class="viewer-body">
@@ -746,8 +752,12 @@ async function renderPage() {{
   if (!total) return;
   const page = pages[currentPageIdx];
 
+  currentZoom = 1.0;
+  document.getElementById("zoom-label").textContent = "100%";
   const img = document.getElementById("viewer-img");
   img.className = "";
+  img.style.transform = "";
+  img.style.maxWidth = "100%";
   img.src = `input/${{page.filename}}`;
   img.onload = applyRotation;
   const label = page.page_label==="cover_front"?"앞표지":page.page_label==="cover_back"?"뒷표지":`${{currentPageIdx+1}} / ${{total}}`;
@@ -808,6 +818,40 @@ window.changePage = function(delta) {{
   renderPage();
 }};
 
+// ── 확대/축소 ─────────────────────────────────────────────────────────────
+let currentZoom = 1.0;
+
+function updateZoom() {{
+  const img = document.getElementById("viewer-img");
+  const rotClass = img.className.replace(/\s/g,"");
+  const isRotated = rotClass==="rot90"||rotClass==="rot270";
+  img.style.transform = isRotated
+    ? `rotate(${{rotClass==="rot90"?90:270}}deg) scale(${{currentZoom}})`
+    : `scale(${{currentZoom}})`;
+  img.style.maxWidth = currentZoom > 1 ? "none" : (isRotated ? "calc(100vh - 160px)" : "100%");
+  document.getElementById("zoom-label").textContent = Math.round(currentZoom*100) + "%";
+}}
+
+window.zoom = function(delta) {{
+  currentZoom = Math.min(4, Math.max(0.25, currentZoom + delta));
+  updateZoom();
+}};
+
+window.resetZoom = function() {{
+  currentZoom = 1.0;
+  updateZoom();
+}};
+
+// 마우스 휠 확대/축소
+document.querySelector(".viewer-image-pane").addEventListener("wheel", e => {{
+  if (document.getElementById("viewer-view").style.display === "flex") {{
+    e.preventDefault();
+    const delta = e.deltaY < 0 ? 0.1 : -0.1;
+    currentZoom = Math.min(4, Math.max(0.25, currentZoom + delta));
+    updateZoom();
+  }}
+}}, {{passive: false}});
+
 // ── 이미지 회전 ───────────────────────────────────────────────────────────
 function getRotKey() {{
   const pages = currentVol?.pages||[];
@@ -821,6 +865,7 @@ function applyRotation() {{
   const deg = parseInt(localStorage.getItem(key)||"0");
   const img = document.getElementById("viewer-img");
   img.className = deg===90?"rot90":deg===180?"rot180":deg===270?"rot270":"";
+  updateZoom();
 }}
 
 window.rotateImage = function(delta) {{
