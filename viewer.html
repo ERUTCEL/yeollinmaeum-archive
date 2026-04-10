@@ -57,9 +57,23 @@ body{font-family:"Malgun Gothic","Apple Gothic",sans-serif;background:#f5f0e8;co
 .save-btn:disabled{opacity:.5;cursor:default}
 .comment-list{display:flex;flex-direction:column;gap:10px;margin-bottom:12px;min-height:20px}
 .comment-item{background:#f5f0e8;border-radius:8px;padding:10px 12px}
+.comment-item.is-reply{background:#ede8e0;margin-left:18px;border-left:2px solid #c8b89a}
 .comment-author{font-size:.78rem;font-weight:700;color:#3d2b1f;margin-bottom:3px}
 .comment-text{font-size:.85rem;color:#444;line-height:1.6;white-space:pre-wrap;word-break:break-word}
 .comment-time{font-size:.68rem;color:#aaa;margin-top:4px}
+.comment-actions{display:flex;align-items:center;gap:8px;margin-top:6px}
+.comment-like-btn{background:none;border:none;cursor:pointer;font-size:.78rem;color:#888;padding:2px 6px;border-radius:12px;display:flex;align-items:center;gap:3px;transition:background .15s}
+.comment-like-btn:hover{background:#e8dfd0}
+.comment-like-btn.liked{color:#c0392b}
+.comment-reply-btn{background:none;border:none;cursor:pointer;font-size:.78rem;color:#888;padding:2px 6px;border-radius:12px;transition:background .15s}
+.comment-reply-btn:hover{background:#e8dfd0;color:#3d2b1f}
+.reply-form{margin-top:8px;display:flex;flex-direction:column;gap:5px}
+.reply-form textarea{padding:6px 8px;border:1px solid #d4c8b4;border-radius:6px;font-size:.82rem;font-family:inherit;resize:none;background:#fdf9f3;outline:none}
+.reply-form textarea:focus{border-color:#a08060}
+.reply-form-footer{display:flex;gap:6px;align-items:center}
+.reply-form-footer input{flex:1;padding:4px 8px;border:1px solid #d4c8b4;border-radius:6px;font-size:.78rem;background:#fdf9f3;outline:none}
+.reply-submit{background:#3d2b1f;color:#f5efe4;border:none;padding:4px 12px;border-radius:6px;cursor:pointer;font-size:.78rem;font-weight:600;white-space:nowrap}
+.reply-submit:hover{background:#5a3f2e}
 .comment-form{display:flex;flex-direction:column;gap:6px}
 .comment-nick{padding:6px 10px;border:1px solid #d4c8b4;border-radius:6px;font-size:.82rem;background:#fdf9f3;outline:none}
 .comment-nick:focus{border-color:#a08060}
@@ -173,7 +187,7 @@ mark{background:#ffe066;border-radius:2px;padding:0 2px}
 <!-- Firebase SDK -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, doc, getDoc, setDoc, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, doc, getDoc, setDoc, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, updateDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBYA3D-MgA2MeTUgQOuDFdBZ4nz1iOzzXk",
@@ -334,18 +348,43 @@ async function renderPage() {
     if (!list) return;
     if (snap.empty) {
       list.innerHTML = `<span style="color:#bbb;font-size:.8rem;font-style:italic">첫 댓글을 남겨보세요!</span>`;
-    } else {
-      list.innerHTML = snap.docs.map(d => {
-        const c = d.data();
-        const ts = c.created_at?.toDate?.();
-        const timeStr = ts ? ts.toLocaleDateString("ko-KR") + " " + ts.toLocaleTimeString("ko-KR", {hour:"2-digit",minute:"2-digit"}) : "";
-        return `<div class="comment-item">
-          <div class="comment-author">${c.author||"익명"}</div>
-          <div class="comment-text">${c.text.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}</div>
-          <div class="comment-time">${timeStr}</div>
-        </div>`;
-      }).join("");
+      return;
     }
+    const uid = getOrCreateUserId();
+    const allDocs = snap.docs.map(d => ({id: d.id, ref: d.ref, ...d.data()}));
+    const roots = allDocs.filter(c => !c.parent_id);
+    const repliesMap = {};
+    allDocs.filter(c => c.parent_id).forEach(c => {
+      if (!repliesMap[c.parent_id]) repliesMap[c.parent_id] = [];
+      repliesMap[c.parent_id].push(c);
+    });
+    function renderComment(c, isReply) {
+      const ts = c.created_at?.toDate?.();
+      const timeStr = ts ? ts.toLocaleDateString("ko-KR") + " " + ts.toLocaleTimeString("ko-KR", {hour:"2-digit",minute:"2-digit"}) : "";
+      const likes = c.likes || [];
+      const liked = likes.includes(uid);
+      const likeCount = likes.length;
+      const safeText = c.text.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\n/g,"<br>");
+      const replyBtn = isReply ? "" : `<button class="comment-reply-btn" onclick="showReplyForm('${c.id}')">답글</button>`;
+      return `<div class="comment-item${isReply?" is-reply":""}" id="ci-${c.id}">
+        <div class="comment-author">${(c.author||"익명").replace(/&/g,"&amp;").replace(/</g,"&lt;")}</div>
+        <div class="comment-text">${safeText}</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px">
+          <div class="comment-actions">
+            <button class="comment-like-btn${liked?" liked":""}" onclick="toggleLike('${key}','${c.id}')">
+              ${liked?"♥":"♡"} ${likeCount > 0 ? likeCount : ""}
+            </button>
+            ${replyBtn}
+          </div>
+          <div class="comment-time">${timeStr}</div>
+        </div>
+        <div id="rf-${c.id}"></div>
+      </div>`;
+    }
+    list.innerHTML = roots.map(c => {
+      const replies = (repliesMap[c.id] || []).map(r => renderComment(r, true)).join("");
+      return renderComment(c, false) + replies;
+    }).join("");
   });
 }
 
@@ -523,6 +562,65 @@ window.saveTranscription = async function() {
   }
 };
 
+// ── 유저 ID ────────────────────────────────────────────────────────────────
+function getOrCreateUserId() {
+  let uid = localStorage.getItem("anon_uid");
+  if (!uid) {
+    uid = "u_" + Math.random().toString(36).slice(2,10) + Date.now().toString(36);
+    localStorage.setItem("anon_uid", uid);
+  }
+  return uid;
+}
+
+// ── 댓글 좋아요 ───────────────────────────────────────────────────────────
+window.toggleLike = async function(pageKey, commentId) {
+  const uid = getOrCreateUserId();
+  const ref = doc(db, "comments", pageKey, "items", commentId);
+  try {
+    const snap = await getDoc(ref);
+    const likes = snap.data()?.likes || [];
+    if (likes.includes(uid)) {
+      await updateDoc(ref, { likes: arrayRemove(uid) });
+    } else {
+      await updateDoc(ref, { likes: arrayUnion(uid) });
+    }
+  } catch(e) { console.error(e); }
+};
+
+// ── 답글 폼 ───────────────────────────────────────────────────────────────
+window.showReplyForm = function(commentId) {
+  const container = document.getElementById("rf-" + commentId);
+  if (!container) return;
+  if (container.querySelector(".reply-form")) { container.innerHTML = ""; return; }
+  container.innerHTML = `
+    <div class="reply-form">
+      <textarea rows="2" id="rt-${commentId}" placeholder="답글을 입력하세요..."></textarea>
+      <div class="reply-form-footer">
+        <input type="text" id="rn-${commentId}" placeholder="닉네임" maxlength="20">
+        <button class="reply-submit" onclick="submitReply('${commentId}')">등록</button>
+      </div>
+    </div>`;
+  document.getElementById("rt-" + commentId).focus();
+};
+
+window.submitReply = async function(parentId) {
+  const pages = currentVol?.pages||[];
+  if (!pages.length) return;
+  const key = pageKey(pages[currentPageIdx]);
+  const text = document.getElementById("rt-" + parentId)?.value.trim();
+  const author = document.getElementById("rn-" + parentId)?.value.trim() || "익명";
+  if (!text) { alert("답글 내용을 입력해주세요."); return; }
+  try {
+    await addDoc(collection(db, "comments", key, "items"), {
+      text, author, parent_id: parentId, likes: [], created_at: serverTimestamp()
+    });
+    const container = document.getElementById("rf-" + parentId);
+    if (container) container.innerHTML = "";
+  } catch(e) {
+    alert("답글 저장 실패: " + e.message);
+  }
+};
+
 // ── 댓글 제출 ─────────────────────────────────────────────────────────────
 window.submitComment = async function() {
   const pages = currentVol?.pages||[];
@@ -533,7 +631,7 @@ window.submitComment = async function() {
   if (!text) { alert("댓글 내용을 입력해주세요."); return; }
   try {
     await addDoc(collection(db, "comments", pageKey(page), "items"), {
-      text, author, created_at: serverTimestamp()
+      text, author, parent_id: null, likes: [], created_at: serverTimestamp()
     });
     document.getElementById("comment-text").value = "";
   } catch(e) {
