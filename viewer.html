@@ -73,6 +73,13 @@ body{font-family:"Malgun Gothic","Apple Gothic",sans-serif;background:#f5f0e8;co
 .result-card:hover{box-shadow:0 3px 10px rgba(0,0,0,.1)}
 .result-vol{font-size:.72rem;color:#9b8870;margin-bottom:4px}
 mark{background:#ffe066;border-radius:2px;padding:0 2px}
+@media(max-width:640px){
+  #viewer-view{height:auto;min-height:calc(100vh - 54px)}
+  .viewer-body{flex-direction:column;overflow:visible}
+  .viewer-image-pane{height:60vw;min-height:260px;overflow:hidden}
+  .viewer-side{width:100%;border-left:none;border-top:1px solid #e0d0bc}
+  .trans-area{min-height:80px}
+}
 </style>
 </head>
 <body>
