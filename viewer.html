@@ -88,8 +88,7 @@ body{font-family:"Malgun Gothic","Apple Gothic",sans-serif;background:#f5f0e8;co
 .result-vol{font-size:.72rem;color:#9b8870;margin-bottom:4px}
 mark{background:#ffe066;border-radius:2px;padding:0 2px}
 .mobile-controls{display:none}
-.toolbar-rotate{display:flex}
-.toolbar-zoom{display:flex}
+.toolbar-extras{display:flex;align-items:center;margin-left:8px}
 .fav-btn{background:#f0e8dc;border:1px solid #c8b89a;color:#3d2b1f;width:30px;height:30px;border-radius:7px;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;transition:background .15s}
 .fav-btn.active{background:#ffe0e0;border-color:#e8a0a0;color:#c0392b}
 .fav-section{margin-bottom:28px}
@@ -105,7 +104,7 @@ mark{background:#ffe066;border-radius:2px;padding:0 2px}
   .viewer-image-pane{height:60vw;min-height:260px;overflow:hidden}
   .viewer-side{width:100%;border-left:none;border-top:1px solid #e0d0bc}
   .trans-area{min-height:80px}
-  .toolbar-rotate,.toolbar-zoom,#fav-btn{display:none}
+  .toolbar-extras{display:none}
   .mobile-controls{display:flex;align-items:center;justify-content:center;gap:8px;padding:8px 12px;background:#fff;border-bottom:1px solid #e0d0bc;flex-shrink:0}
 }
 </style>
@@ -130,16 +129,18 @@ mark{background:#ffe066;border-radius:2px;padding:0 2px}
       <span class="page-indicator" id="page-indicator"></span>
       <button class="page-btn" id="btn-next" onclick="changePage(1)">›</button>
     </div>
-    <button class="fav-btn" id="fav-btn" onclick="toggleFav()" title="즐겨찾기" style="margin-left:8px">🍏</button>
-    <div class="toolbar-rotate" style="gap:4px;margin-left:8px">
-      <button class="page-btn" onclick="rotateImage(-90)" title="왼쪽으로 회전">↺</button>
-      <button class="page-btn" onclick="rotateImage(90)" title="오른쪽으로 회전">↻</button>
-    </div>
-    <div class="toolbar-zoom" style="gap:4px;margin-left:4px;align-items:center">
-      <button class="page-btn" onclick="zoom(-0.1)" title="축소">－</button>
-      <span id="zoom-label" style="font-size:.75rem;color:#888;min-width:36px;text-align:center">맞춤</span>
-      <button class="page-btn" onclick="zoom(0.1)" title="확대">＋</button>
-      <button class="page-btn" onclick="resetZoom()" title="화면에 맞춤" style="font-size:.65rem;padding:0 4px;width:auto">맞춤</button>
+    <div class="toolbar-extras">
+      <button class="fav-btn" id="fav-btn" onclick="toggleFav()" title="즐겨찾기">🍏</button>
+      <div style="display:flex;gap:4px;margin-left:8px">
+        <button class="page-btn" onclick="rotateImage(-90)" title="왼쪽으로 회전">↺</button>
+        <button class="page-btn" onclick="rotateImage(90)" title="오른쪽으로 회전">↻</button>
+      </div>
+      <div style="display:flex;gap:4px;margin-left:4px;align-items:center">
+        <button class="page-btn" onclick="zoom(-0.1)" title="축소">－</button>
+        <span id="zoom-label" style="font-size:.75rem;color:#888;min-width:36px;text-align:center">맞춤</span>
+        <button class="page-btn" onclick="zoom(0.1)" title="확대">＋</button>
+        <button class="page-btn" onclick="resetZoom()" title="화면에 맞춤" style="font-size:.65rem;padding:0 4px;width:auto">맞춤</button>
+      </div>
     </div>
   </div>
   <div class="mobile-controls">
