@@ -1,6 +1,6 @@
 {
   "project": "열린마음 아카이브",
-  "created_at": "2026-04-10T11:39:02.264912",
+  "created_at": "2026-04-10T11:42:07.105785",
   "total_records": 739,
   "volumes": [
     {
@@ -9,7 +9,7 @@
       "short_title": "열린마음",
       "year": 1991,
       "cover": "1991년_열린마음_cover_front.jpg",
-      "page_count": 56,
+      "page_count": 53,
       "pages": [
         {
           "date": null,
