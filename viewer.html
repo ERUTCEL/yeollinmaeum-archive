@@ -73,12 +73,15 @@ body{font-family:"Malgun Gothic","Apple Gothic",sans-serif;background:#f5f0e8;co
 .result-card:hover{box-shadow:0 3px 10px rgba(0,0,0,.1)}
 .result-vol{font-size:.72rem;color:#9b8870;margin-bottom:4px}
 mark{background:#ffe066;border-radius:2px;padding:0 2px}
+.mobile-controls{display:none}
 @media(max-width:640px){
   #viewer-view{height:auto;min-height:calc(100vh - 54px)}
   .viewer-body{flex-direction:column;overflow:visible}
   .viewer-image-pane{height:60vw;min-height:260px;overflow:hidden}
   .viewer-side{width:100%;border-left:none;border-top:1px solid #e0d0bc}
   .trans-area{min-height:80px}
+  .toolbar-rotate,.toolbar-zoom{display:none}
+  .mobile-controls{display:flex;align-items:center;justify-content:center;gap:8px;padding:8px 12px;background:#fff;border-bottom:1px solid #e0d0bc;flex-shrink:0}
 }
 </style>
 </head>
@@ -102,16 +105,25 @@ mark{background:#ffe066;border-radius:2px;padding:0 2px}
       <span class="page-indicator" id="page-indicator"></span>
       <button class="page-btn" id="btn-next" onclick="changePage(1)">›</button>
     </div>
-    <div style="display:flex;gap:4px;margin-left:8px">
+    <div class="toolbar-rotate" style="display:flex;gap:4px;margin-left:8px">
       <button class="page-btn" onclick="rotateImage(-90)" title="왼쪽으로 회전">↺</button>
       <button class="page-btn" onclick="rotateImage(90)" title="오른쪽으로 회전">↻</button>
     </div>
-    <div style="display:flex;gap:4px;margin-left:4px;align-items:center">
+    <div class="toolbar-zoom" style="display:flex;gap:4px;margin-left:4px;align-items:center">
       <button class="page-btn" onclick="zoom(-0.1)" title="축소">－</button>
       <span id="zoom-label" style="font-size:.75rem;color:#888;min-width:36px;text-align:center">맞춤</span>
       <button class="page-btn" onclick="zoom(0.1)" title="확대">＋</button>
       <button class="page-btn" onclick="resetZoom()" title="화면에 맞춤" style="font-size:.65rem;padding:0 4px;width:auto">맞춤</button>
     </div>
+  </div>
+  <div class="mobile-controls">
+    <button class="page-btn" onclick="rotateImage(-90)" title="왼쪽으로 회전">↺</button>
+    <button class="page-btn" onclick="rotateImage(90)" title="오른쪽으로 회전">↻</button>
+    <div style="width:1px;height:20px;background:#e0d0bc;margin:0 4px"></div>
+    <button class="page-btn" onclick="zoom(-0.1)" title="축소">－</button>
+    <span id="zoom-label-mobile" style="font-size:.75rem;color:#888;min-width:36px;text-align:center">맞춤</span>
+    <button class="page-btn" onclick="zoom(0.1)" title="확대">＋</button>
+    <button class="page-btn" onclick="resetZoom()" style="font-size:.65rem;padding:0 4px;width:auto">맞춤</button>
   </div>
   <div class="viewer-body">
     <div class="viewer-image-pane" id="viewer-pane">
@@ -315,8 +327,11 @@ function pzApply() {
   if (!wrap || !img) return;
   wrap.style.transform = `translate(${pz.panX}px,${pz.panY}px) scale(${pz.zoom})`;
   img.style.transform = pz.rotDeg ? `rotate(${pz.rotDeg}deg)` : "";
+  const labelText = Math.round(pz.zoom*100) + "%";
   const label = document.getElementById("zoom-label");
-  if (label) label.textContent = Math.round(pz.zoom*100) + "%";
+  if (label) label.textContent = labelText;
+  const labelM = document.getElementById("zoom-label-mobile");
+  if (labelM) labelM.textContent = labelText;
 }
 
 function pzFitAndCenter() {
