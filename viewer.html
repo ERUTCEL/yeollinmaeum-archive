@@ -74,6 +74,8 @@ body{font-family:"Malgun Gothic","Apple Gothic",sans-serif;background:#f5f0e8;co
 .result-vol{font-size:.72rem;color:#9b8870;margin-bottom:4px}
 mark{background:#ffe066;border-radius:2px;padding:0 2px}
 .mobile-controls{display:none}
+.toolbar-rotate{display:flex}
+.toolbar-zoom{display:flex}
 @media(max-width:640px){
   #viewer-view{height:auto;min-height:calc(100vh - 54px)}
   .viewer-body{flex-direction:column;overflow:visible}
@@ -105,11 +107,11 @@ mark{background:#ffe066;border-radius:2px;padding:0 2px}
       <span class="page-indicator" id="page-indicator"></span>
       <button class="page-btn" id="btn-next" onclick="changePage(1)">›</button>
     </div>
-    <div class="toolbar-rotate" style="display:flex;gap:4px;margin-left:8px">
+    <div class="toolbar-rotate" style="gap:4px;margin-left:8px">
       <button class="page-btn" onclick="rotateImage(-90)" title="왼쪽으로 회전">↺</button>
       <button class="page-btn" onclick="rotateImage(90)" title="오른쪽으로 회전">↻</button>
     </div>
-    <div class="toolbar-zoom" style="display:flex;gap:4px;margin-left:4px;align-items:center">
+    <div class="toolbar-zoom" style="gap:4px;margin-left:4px;align-items:center">
       <button class="page-btn" onclick="zoom(-0.1)" title="축소">－</button>
       <span id="zoom-label" style="font-size:.75rem;color:#888;min-width:36px;text-align:center">맞춤</span>
       <button class="page-btn" onclick="zoom(0.1)" title="확대">＋</button>
