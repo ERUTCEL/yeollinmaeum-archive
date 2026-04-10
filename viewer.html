@@ -76,6 +76,15 @@ mark{background:#ffe066;border-radius:2px;padding:0 2px}
 .mobile-controls{display:none}
 .toolbar-rotate{display:flex}
 .toolbar-zoom{display:flex}
+.fav-btn{background:#f0e8dc;border:1px solid #c8b89a;color:#3d2b1f;width:30px;height:30px;border-radius:7px;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;transition:background .15s}
+.fav-btn.active{background:#ffe0e0;border-color:#e8a0a0;color:#c0392b}
+.fav-section{margin-bottom:28px}
+.fav-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+.fav-card{background:#fffdf7;border:1px solid #e0d0bc;border-radius:8px;overflow:hidden;cursor:pointer;transition:all .2s;font-size:.78rem}
+.fav-card:hover{box-shadow:0 3px 10px rgba(0,0,0,.12);transform:translateY(-1px)}
+.fav-card-img{width:100%;aspect-ratio:3/4;overflow:hidden;background:#e8dfd0}
+.fav-card-img img{width:100%;height:100%;object-fit:cover}
+.fav-card-info{padding:7px 9px;color:#3d2b1f;line-height:1.4}
 @media(max-width:640px){
   #viewer-view{height:auto;min-height:calc(100vh - 54px)}
   .viewer-body{flex-direction:column;overflow:visible}
@@ -107,6 +116,7 @@ mark{background:#ffe066;border-radius:2px;padding:0 2px}
       <span class="page-indicator" id="page-indicator"></span>
       <button class="page-btn" id="btn-next" onclick="changePage(1)">›</button>
     </div>
+    <button class="fav-btn" id="fav-btn" onclick="toggleFav()" title="즐겨찾기" style="margin-left:8px">♡</button>
     <div class="toolbar-rotate" style="display:flex;gap:4px;margin-left:8px">
       <button class="page-btn" onclick="rotateImage(-90)" title="왼쪽으로 회전">↺</button>
       <button class="page-btn" onclick="rotateImage(90)" title="오른쪽으로 회전">↻</button>
@@ -119,6 +129,8 @@ mark{background:#ffe066;border-radius:2px;padding:0 2px}
     </div>
   </div>
   <div class="mobile-controls">
+    <button class="fav-btn" id="fav-btn-m" onclick="toggleFav()" title="즐겨찾기">♡</button>
+    <div style="width:1px;height:20px;background:#e0d0bc;margin:0 4px"></div>
     <button class="page-btn" onclick="rotateImage(-90)" title="왼쪽으로 회전">↺</button>
     <button class="page-btn" onclick="rotateImage(90)" title="오른쪽으로 회전">↻</button>
     <div style="width:1px;height:20px;background:#e0d0bc;margin:0 4px"></div>
@@ -213,6 +225,31 @@ function renderHome() {
     </div>
   </div>`;
 
+  // 즐겨찾기 섹션
+  const favKeys = getFavs();
+  if (favKeys.length > 0) {
+    const favPages = [];
+    VOLUMES.forEach(vol => {
+      (vol.pages || []).forEach((pg, idx) => {
+        if (favKeys.includes(pageKey(pg))) favPages.push({vol, pg, idx});
+      });
+    });
+    if (favPages.length > 0) {
+      html += `<div class="fav-section"><div class="year-label" style="margin-bottom:14px">♥ 즐겨찾기</div><div class="fav-grid">`;
+      favPages.forEach(({vol, pg, idx}) => {
+        const label = pg.page_label==="cover_front"?"앞표지":pg.page_label==="cover_back"?"뒷표지":`${idx+1}페이지`;
+        const thumb = pg.filename
+          ? `<img src="input/${encodeURIComponent(pg.filename)}" alt="" onerror="this.style.display='none'">`
+          : "";
+        html += `<div class="fav-card" onclick="openVolume('${vol.id}',${idx})">
+          <div class="fav-card-img">${thumb}</div>
+          <div class="fav-card-info"><div style="font-weight:600">${vol.short_title||vol.title}</div><div style="color:#8b7355">${label}</div></div>
+        </div>`;
+      });
+      html += `</div></div>`;
+    }
+  }
+
   sortedYears.forEach(year => {
     html += `<div class="timeline-year"><div class="year-label">${year}년</div><div class="vol-grid">`;
     years[year].forEach(vol => {
@@ -266,6 +303,7 @@ async function renderPage() {
   document.getElementById("page-indicator").textContent = label;
   document.getElementById("btn-prev").disabled = currentPageIdx===0;
   document.getElementById("btn-next").disabled = currentPageIdx>=total-1;
+  updateFavBtn();
 
   // 전사 로드
   document.getElementById("trans-area").value = "";
@@ -426,6 +464,39 @@ window.rotateImage = function(delta) {
   pz.rotDeg = next;
   document.getElementById("viewer-img").style.transform = next ? `rotate(${next}deg)` : "";
   pzFitAndCenter();
+};
+
+// ── 즐겨찾기 ──────────────────────────────────────────────────────────────
+function getFavs() {
+  try { return JSON.parse(localStorage.getItem("fav_pages") || "[]"); } catch { return []; }
+}
+function saveFavs(favs) {
+  localStorage.setItem("fav_pages", JSON.stringify(favs));
+}
+function updateFavBtn() {
+  const pages = currentVol?.pages || [];
+  if (!pages.length) return;
+  const key = pageKey(pages[currentPageIdx]);
+  const isFav = getFavs().includes(key);
+  ["fav-btn","fav-btn-m"].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = isFav ? "♥" : "♡";
+    el.classList.toggle("active", isFav);
+  });
+}
+window.toggleFav = function() {
+  const pages = currentVol?.pages || [];
+  if (!pages.length) return;
+  const key = pageKey(pages[currentPageIdx]);
+  let favs = getFavs();
+  if (favs.includes(key)) {
+    favs = favs.filter(k => k !== key);
+  } else {
+    favs.push(key);
+  }
+  saveFavs(favs);
+  updateFavBtn();
 };
 
 // ── 전사 저장 ─────────────────────────────────────────────────────────────
